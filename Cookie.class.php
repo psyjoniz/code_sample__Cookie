@@ -2,7 +2,7 @@
 
 /**
  * 2013.11.30 - Jesse L Quattlebaum (psyjoniz@gmail.com) (https://github.com/psyjoniz/code_sample__Cookie)
- * A small class for handling Cookies with complex types.
+ * A class handling Cookies with complex types.
  *
  * To note: trying to `$this->aStorage &= $_COOKIE[$this->sStorage]` and then
  * `return $this->aStorage[$sName]` did not work for some reason which is why

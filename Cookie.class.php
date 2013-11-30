@@ -2,7 +2,7 @@
 
 /**
  * 2013.11.30 - Jesse L Quattlebaum (psyjoniz@gmail.com)
- * A quick class for handling cookies.  Also handles complex types.
+ * A small class for handling Cookies with complex types.
  *
  * To note: trying to `$this->aStorage &= $_COOKIE[$this->sStorage]` and then
  * `return $this->aStorage[$sName]` did not work for some reason which is why

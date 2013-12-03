@@ -1,6 +1,6 @@
 Code Sample : Cookie
 
-A basic stand-alone PHP class for Cookies.  Handles complex items.
+A basic PHP class for Cookies.  Handles complex items.
 
 Example of use :
 

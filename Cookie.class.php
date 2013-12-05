@@ -39,19 +39,27 @@ class Cookie {
 	 */
 	public function set($sName = null, $mValue = null, $tsExpire = null)
 	{
+		if(headers_sent()) {
+			throw new Exception('Headers already sent; Cannot set cookie.');
+		}
 		if(null === $sName || !is_string($sName)) {
 			throw new Exception('Invalid Cookie name supplied.');
-			return false;
 		}
 		if(null === $mValue) {
 			throw new Exception('Cookie value not supplied.');
-			return false;
 		}
 		$sValueToSet = json_encode(array('content' => serialize($mValue)));
 		if(null === $tsExpire) {
 			$tsExpire = ( time() + ( 60 * 60 * 24 * 365 ) );
 		}
-		setCookie($this->sStorage . "[" . $sName . "]", $sValueToSet, $tsExpire, '/', $_SERVER['HTTP_HOST'], 0);
+		if($_SERVER['HTTP_HOST'] == 'localhost') {
+			$sHTTPHost = false;
+		} else {
+			$sHTTPHost = $_SERVER['HTTP_HOST'];
+		}
+		if(false === setCookie($this->sStorage . "[" . $sName . "]", $sValueToSet, $tsExpire, '/', $sHTTPHost, 0)) {
+			throw new Exception('Cookie was not able to be set.');
+		}
 		$_COOKIE[$this->sStorage][$sName] = $sValueToSet; // makes cookie available right away to php
 		return true;
 	}
@@ -66,10 +74,9 @@ class Cookie {
 	{
 		if(null === $sName || !is_string($sName)) {
 			throw new Exception('Invalid Cookie name supplied.');
-			return false;
 		}
 		if(!isset($_COOKIE[$this->sStorage][$sName])) {
-			return false;
+			return null;
 		}
 		$sValue = $_COOKIE[$this->sStorage][$sName];
 		$aValue = json_decode($sValue, true);
@@ -87,7 +94,6 @@ class Cookie {
 	{
 		if(null === $sName || !is_string($sName)) {
 			throw new Exception('Invalid Cookie name supplied.');
-			return false;
 		}
 		$this->set($sName, '', ( time() - ( 60 * 60 * 24 * 365 ) ));
 		unset($_COOKIE[$this->sStorage][$sName]); // makes cookie unavailable right away
@@ -104,7 +110,6 @@ class Cookie {
 			if(false === $this->remove($sName))
 			{
 				throw new Exception('Remove all failed.');
-				return false;
 			}
 		}
 		return true;

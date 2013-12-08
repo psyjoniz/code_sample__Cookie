@@ -42,7 +42,9 @@ class Cookie {
 		if(headers_sent()) {
 			throw new Exception('Headers already sent; Cannot set cookie.');
 		}
-		if(null === $sName || !is_string($sName)) {
+		$sNormalizedName = preg_replace("/[^a-z0-9]+i/", '', $sName);
+		error_log('sNormalizedName : ' . $sNormalizedName);
+		if(null === $sName || !is_string($sName) || $sName != $sNormalizedName) {
 			throw new Exception('Invalid Cookie name supplied.');
 		}
 		if(null === $mValue) {
@@ -76,7 +78,7 @@ class Cookie {
 			throw new Exception('Invalid Cookie name supplied.');
 		}
 		if(!isset($_COOKIE[$this->sStorage][$sName])) {
-			return null;
+			throw new Exception('Cookie \'' . $sName . '\' does not exist.');
 		}
 		$sValue = $_COOKIE[$this->sStorage][$sName];
 		$aValue = json_decode($sValue, true);

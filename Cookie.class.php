@@ -45,7 +45,7 @@ class Cookie {
 	/**
 	 * get the host to be used when setting a cookie
 	 *
-	 * @return void
+	 * @return boolean|string
 	 */
 	private function getHTTPHost() {
 		if($_SERVER['HTTP_HOST'] == 'localhost') {

@@ -3,26 +3,22 @@
 /**
  * 2013.11.30 - Jesse L Quattlebaum (psyjoniz@gmail.com) (https://github.com/psyjoniz/code_sample__Cookie)
  * A class handling Cookies with complex types.
- *
- * To note: trying to `$this->aStorage &= $_COOKIE[$this->sStorage]` and then
- * `return $this->aStorage[$sName]` did not work for some reason which is why
- * `$_COOKIE[$this->sStorage]` is being used.
  */
 
 class Cookie {
 
-	private $sStorage = 'storage_namespace';
+	private $sNamespace = 'psy-core';
 
 	/**
 	 * constructor allowing optional namespace
 	 *
-	 * @param string $sStorage name of namespace to be used for data storage within global $_COOKIE
+	 * @param string $sNamespace name of namespace to be used for data storage within global $_COOKIE
 	 * @return void
 	 */
-	function __construct($sStorage = null)
+	function __construct($sNamespace = null)
 	{
-		if(null !== $sStorage) {
-			$this->sStorage = $sStorage;
+		if(null !== $sNamespace) {
+			$this->sNamespace = $sNamespace;
 		}
 	}
 
@@ -78,10 +74,10 @@ class Cookie {
 		if(null === $tsExpire) {
 			$tsExpire = ( time() + ( 60 * 60 * 24 * 365 ) );
 		}
-		if(false === setCookie($this->sStorage . "[" . $sName . "]", $sValueToSet, $tsExpire, '/', $this->getHTTPHost(), 0)) {
+		if(false === setCookie($this->sNamespace . "[" . $sName . "]", $sValueToSet, $tsExpire, '/', $this->getHTTPHost(), 0)) {
 			throw new Exception('Cookie was not able to be set.');
 		}
-		$_COOKIE[$this->sStorage][$sName] = $sValueToSet; // makes cookie available right away to php
+		$_COOKIE[$this->sNamespace][$sName] = $sValueToSet; // makes cookie available right away to php
 		return true;
 	}
 
@@ -96,10 +92,10 @@ class Cookie {
 		if(true !== $sMessage = $this->validateName($sName)) {
 			throw new Exception($sMessage);
 		}
-		if(!isset($_COOKIE[$this->sStorage][$sName])) {
+		if(!isset($_COOKIE[$this->sNamespace][$sName])) {
 			throw new Exception('Cookie \'' . $sName . '\' does not exist.');
 		}
-		$sValue = $_COOKIE[$this->sStorage][$sName];
+		$sValue = $_COOKIE[$this->sNamespace][$sName];
 		$aValue = json_decode($sValue, true);
 		$mReturn = unserialize($aValue['content']);
 		return $mReturn;
@@ -117,7 +113,7 @@ class Cookie {
 			throw new Exception($sMessage);
 		}
 		$this->set($sName, '', ( time() - ( 60 * 60 * 24 * 365 ) ));
-		unset($_COOKIE[$this->sStorage][$sName]); // makes cookie unavailable right away
+		unset($_COOKIE[$this->sNamespace][$sName]); // makes cookie unavailable right away
 	}
 
 	/**
@@ -127,15 +123,15 @@ class Cookie {
 	 */
 	public function removeAll()
 	{
-		foreach($_COOKIE[$this->sStorage] as $sName => $mValue) {
+		foreach($_COOKIE[$this->sNamespace] as $sName => $mValue) {
 			if(false === $this->remove($sName))
 			{
 				throw new Exception('Remove all failed.');
 			}
 		}
 		$tsExpire = ( time() + ( 60 * 60 * 24 * 365 ) );
-		setCookie($this->sStorage, '', $tsExpire, '/', $this->getHTTPHost(), 0);
-		unset($_COOKIE[$this->sStorage]);
+		setCookie($this->sNamespace, '', $tsExpire, '/', $this->getHTTPHost(), 0);
+		unset($_COOKIE[$this->sNamespace]);
 		return true;
 	}
 }

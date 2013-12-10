@@ -7,7 +7,7 @@
 
 class Cookie {
 
-	private $sNamespace = 'psy-core';
+	private $sNamespace = 'psy-core'; //because cookies are weird
 
 	/**
 	 * constructor allowing optional namespace
@@ -23,6 +23,15 @@ class Cookie {
 	}
 
 	/**
+	 * get the current namespace
+	 *
+	 * @return void
+	 */
+	public function getNamespace() {
+		return $this->sNamespace;
+	}
+
+	/**
 	 * validate the name of a cookie
 	 *
 	 * @param string $sName name of cookie to validate
@@ -30,7 +39,8 @@ class Cookie {
 	 */
 	private function validateName($sName)
 	{
-		$sNormalizedName = preg_replace("/[^a-z0-9]+i/", '', $sName);
+		return true;
+		$sNormalizedName = preg_replace("/[^a-zA-Z0-9_]/", '', $sName);
 		$sNormalizedName = str_replace(' ', '', $sNormalizedName);
 		if(null === $sName || !isset($sName) || trim($sName) == '' || $sName != $sNormalizedName) {
 			return 'Invalid Cookie name supplied.';
@@ -57,9 +67,10 @@ class Cookie {
 	 * @param string $sName name of cookie
 	 * @param mixed $mValue value of cookie may be pretty much anything (though some complex objects may not store properly)
 	 * @param interger $tsExpire expiration timestamp
+	 * @param boolean $bNamespace whether or not to use namespacing
 	 * @return boolean
 	 */
-	public function set($sName = null, $mValue = null, $tsExpire = null)
+	public function set($sName = null, $mValue = null, $tsExpire = null, $bNamespace = true)
 	{
 		if(headers_sent()) {
 			throw new Exception('Headers already sent; Cannot set cookie.');
@@ -74,10 +85,25 @@ class Cookie {
 		if(null === $tsExpire) {
 			$tsExpire = ( time() + ( 60 * 60 * 24 * 365 ) );
 		}
-		if(false === setCookie($this->sNamespace . "[" . $sName . "]", $sValueToSet, $tsExpire, '/', $this->getHTTPHost(), 0)) {
-			throw new Exception('Cookie was not able to be set.');
+		if(true === $bNamespace) {
+			if(false === setCookie($this->sNamespace . "[" . $sName . "]", $sValueToSet, $tsExpire, '/', $this->getHTTPHost(), 0)) {
+				throw new Exception('Cookie was not able to be set.');
+			}
+			if($tsExpire > time()) {
+				$_COOKIE[$this->sNamespace][$sName] = $sValueToSet; // makes cookie available right away to php
+			} else {
+				unset($_COOKIE[$this->sNamespace][$sName]); // makes cookie unavailable right away to php
+			}
+		} else {
+			if(false === setCookie($sName, $sValueToSet, $tsExpire, '/', $this->getHTTPHost(), 0)) {
+				throw new Exception('Cookie was not able to be set.');
+			}
+			if($tsExpire > time()) {
+				$_COOKIE[$sName] = $sValueToSet; // makes cookie available right away to php
+			} else {
+				unset($_COOKIE[$sName]); // makes cookie unavailable right away to php
+			}
 		}
-		$_COOKIE[$this->sNamespace][$sName] = $sValueToSet; // makes cookie available right away to php
 		return true;
 	}
 
@@ -105,15 +131,15 @@ class Cookie {
 	 * remove a cookie
 	 *
 	 * @param string $sName name of cookie to remove
-	 * @return boolean|void
+	 * @param boolean $bNamespace whether or not to use namespacing
+	 * @return void
 	 */
-	public function remove($sName = null)
+	public function remove($sName = null, $bNamespace = true)
 	{
 		if(true !== $sMessage = $this->validateName($sName)) {
 			throw new Exception($sMessage);
 		}
-		$this->set($sName, '', ( time() - ( 60 * 60 * 24 * 365 ) ));
-		unset($_COOKIE[$this->sNamespace][$sName]); // makes cookie unavailable right away
+		$this->set($sName, '', ( time() - ( 60 * 60 * 24 * 365 ) ), $bNamespace);
 	}
 
 	/**
@@ -123,15 +149,14 @@ class Cookie {
 	 */
 	public function removeAll()
 	{
-		foreach($_COOKIE[$this->sNamespace] as $sName => $mValue) {
-			if(false === $this->remove($sName))
-			{
-				throw new Exception('Remove all failed.');
-			}
+		//remove our cookies
+		foreach($_COOKIE[$this->sNamespace] as $sKey => $sItem) {
+			$this->remove($sKey);
 		}
-		$tsExpire = ( time() + ( 60 * 60 * 24 * 365 ) );
-		setCookie($this->sNamespace, '', $tsExpire, '/', $this->getHTTPHost(), 0);
-		unset($_COOKIE[$this->sNamespace]);
+		//attempt to remove other cookies
+		foreach($_COOKIE as $sKey => $mItem) {
+			$this->remove($sKey, false);
+		}
 		return true;
 	}
 }

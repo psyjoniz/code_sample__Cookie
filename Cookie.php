@@ -19,7 +19,6 @@ try {
 	}
 	//get a cookie
 	if(isset($_REQUEST['get'])) {
-error_log('getting ' . $_REQUEST['name']);
 		$mCookie = $oCookie->get($_REQUEST['name']);
 	}
 	//add oCookie to itself

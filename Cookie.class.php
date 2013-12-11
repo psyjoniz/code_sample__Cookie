@@ -1,35 +1,79 @@
 <?php
 
-//defaults to namespacing
-//only allows one level deep cookie creation (though technically you can go deeper)
+/**
+ * 2013.12.11 - Jesse L Quattlebaum (psyjoniz@gmail.com) (https://github.com/psyjoniz/code_sample__Cookie)
+ * A class for handling Cookies with complex types.
+ *
+ * defaults to namespacing
+ * only allows one level deep cookie creation though technically you can go deeper; for the purposes
+ * of this script and given the nature of cookies we will only go one level deep ($_COOKIE[namespace][item])
+ */
 
 class Cookie {
 
-	private $bNamespace = true;
-	private $sDefaultNamespace = 'psy-core';
+	private $bNamespace        = true;
+	private $sDefaultNamespace = 'psyjoniz';
 	private $sNamespace;
 
+	/**
+	 * constructor with option to override namespace use
+	 *
+	 * @param boolean|string $mNamespace drives use of namespacing
+	 *
+	 * @return void
+	 */
 	public function __construct($mNamespace = true) {
 		$this->setNamespace($mNamespace);
 	}
 
-	public function setNamespace($mNamespace = true) {
+	/**
+	 * setup the namespace to use when interacting with cookies
+	 *
+	 * @param boolean|string $mNamespace drives use of namespacing
+	 *
+	 * @return void
+	 */
+	private function setNamespace($mNamespace = true) {
 		if(false === $mNamespace || null === $mNamespace || trim($mNamespace) == '') {
-			$this->bNamespace = false;
+			$this->unsetNamespace();
 		} elseif(true !== $mNamespace) {
 			if(true !== $mMessage = $this->validateName($mNamespace)) {
 				throw new Exception($mMessage);
 			}
+			$this->bNamespace = true;
 			$this->sNamespace = $mNamespace;
 		} else {
+			$this->bNamespace = true;
 			$this->sNamespace = $this->sDefaultNamespace;
 		}
 	}
 
+	/**
+	 * get the current namespace
+	 *
+	 * @return string
+	 */
 	public function getNamespace() {
 		return $this->sNamespace;
 	}
 
+	/**
+	 * turn namespacing off
+	 *
+	 * @return void
+	 */
+	private function unsetNamespace() {
+		$this->bNamespace = false;
+		$this->sNamespace = '';
+	}
+
+	/**
+	 * validate a cookie name
+	 *
+	 * @param string $sName name to validate
+	 *
+	 * @return boolean
+	 */
 	private function validateName($sName) {
 		if(false === $this->bNamespace) {
 			$sNormalizedName = preg_replace("/[^a-zA-Z0-9_]/", '', $sName);
@@ -41,6 +85,11 @@ class Cookie {
 		return true;
 	}
 
+	/**
+	 * get the host for (un)setting a cookie
+	 *
+	 * @return boolean|string
+	 */
 	private function getHTTPHost() {
 		if($_SERVER['HTTP_HOST'] == 'localhost') {
 			return false;
@@ -49,21 +98,32 @@ class Cookie {
 		}
 	}
 
+	/**
+	 * determine what name setCookie() will use
+	 *
+	 * @param string $sName name to construct actual name from
+	 *
+	 * @return string
+	 */
 	private function getNameToSet($sName) {
-error_log('getNameToSet() : getting name for ' . $sName);
 		if(false === $this->bNamespace) {
-error_log('getNameToSet() : not using namespace');
 			$sNameToSet = $sName;
 		} else {
-error_log('getNameToSet() : using namespace ' . $this->sNamespace);
 			$sNameToSet = $this->sNamespace . '[' . $sName . ']';
 		}
-error_log('getNameToSet() : returning ' . $sNameToSet);
 		return $sNameToSet;
 	}
 
+	/**
+	 * set a cookie
+	 *
+	 * @param string  $sName    name of cookie
+	 * @param mixed   $mValue   value of cookie
+	 * @param integer $tsExpire expiration date of cookie
+	 *
+	 * @return void
+	 */
 	public function set($sName = null, $mValue = null, $tsExpire = null) {
-error_log('set() : setting ' . $sName . ' to ' . $sValue);
 		if(headers_sent()) {
 			throw new Exception('Headers already sent; Cannot set cookie.');
 		}
@@ -71,26 +131,21 @@ error_log('set() : setting ' . $sName . ' to ' . $sValue);
 			throw new Exception($sMessage);
 		}
 		$sValueToSet = json_encode(array('content' => serialize($mValue)));
-error_log('set() : json representation : ' . $sValueToSet);
 		if(null === $tsExpire) {
 			$tsExpire = ( time() + ( 60 * 60 * 24 * 365 ) );
 		}
-error_log('set() : tsExpire : ' . $tsExpire);
 		$sNameToSet = $this->getNameToSet($sName);
-error_log('set() : sNameToSet : ' . $sNameToSet);
 		if(false === setCookie($sNameToSet, $sValueToSet, $tsExpire, '/', $this->getHTTPHost(), 0)) {
 			throw new Exception('Cookie was not able to be set.');
 		}
 		//make cookie (un)available right away
 		if($tsExpire > time()) {
-error_log('set() : making available to php');
 			if(false !== $this->bNamespace) {
 				$_COOKIE[$this->sNamespace][$sName] = $sValueToSet;
 			} else {
 				$_COOKIE[$sName] = $sValueToSet;
 			}
 		} else {
-error_log('set() : making unavailable to php');
 			if(false !== $this->bNamespace) {
 				unset($_COOKIE[$this->sNamespace][$sName]);
 			} else {
@@ -99,58 +154,63 @@ error_log('set() : making unavailable to php');
 		}
 	}
 
+	/**
+	 * get value of a cookie
+	 *
+	 * @param string $sName name of cookie to get
+	 *
+	 * @return mixed
+	 */
 	public function get($sName = null) {
 		if(true !== $sMessage = $this->validateName($sName)) {
 			throw new Exception($sMessage);
 		}
-error_log('get() : getting ' . $sName);
 		if(false === $this->bNamespace) {
-error_log('get() : no namespace');
 			$sValue = $_COOKIE[$sName];
 		} else {
-error_log('get() : using namespace');
 			$sValue = $_COOKIE[$this->sNamespace][$sName];
 		}
-error_log('get() : sValue : ' . $sValue);
 		if(null !== $mValue = json_decode($sValue, true)) {
-error_log('get() : mValue : ' . print_r($mValue, true));
 			if(isset($mValue['content'])) {
-error_log('get() : found \'content\'; unserializing mValue');
 				$mValue = unserialize($mValue['content']);
 			}
 		} else {
-error_log('get() : using unencoded value from sValue');
 			$mValue = $sValue;
 		}
-error_log('get() : mValue : ' . print_r($mValue, true));
 		return $mValue;
 	}
 
+	/**
+	 * remove a single cookie
+	 *
+	 * @param string $sName name of cookie to remove
+	 *
+	 * @return void
+	 */
 	public function remove($sName = null) {
-error_log('remove() : removing ' . $sName);
 		if(true !== $sMessage = $this->validateName($sName)) {
 			throw new Exception($sMessage);
 		}
 		$this->set($sName, '', ( time() - ( 60 * 60 * 24 * 365 ) ));
 	}
 
+	/**
+	 * remove all cookies
+	 *
+	 * @return void
+	 */
 	public function removeAll() {
 		if(false === $this->bNamespace) {
-error_log('removeAll() : no namespace');
 			$mNode = $_COOKIE;
 		} else {
-error_log('removeAll() : using namespace');
 			$mNode = $_COOKIE[$this->sNamespace];
 		}
 		foreach($mNode as $sKey => $mItem) {
-error_log('removeAll() : sKey : ' . $sKey);
-error_log('removeAll() : mItem : ' . print_r($mItem, true));
 			if(true === $this->bNamespace) {
 				$this->remove($sKey);
 			} else {
 				if(is_array($mItem)) {
-					$this->bNamespace = true;
-					$this->sNamespace = $sKey;
+					$this->setNamespace($sKey);
 					foreach($mItem as $sSubKey => $mSubItem) {
 						if(is_array($mSubItem)) {
 							error_log('Silently ignoring the removal of a Cookie that is deeper of an array than this code is intended to handle.');
@@ -158,8 +218,7 @@ error_log('removeAll() : mItem : ' . print_r($mItem, true));
 							$this->remove($sSubKey);
 						}
 					}
-					$this->bNamespace = false;
-					$this->sNamespace = '';
+					$this->unsetNamespace();
 				} else {
 					$this->remove($sKey);
 				}
